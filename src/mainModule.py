@@ -12,18 +12,25 @@ CHECKPOINT_PATH = "saved_brain_tumor_models"
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 print("Device:", device)
 
+def plot_metrics(metrics, title, ylabel):
+    plt.plot(range(1, len(metrics) + 1), metrics, marker='o')
+    plt.title(title)
+    plt.xlabel('Epoch')
+    plt.ylabel(ylabel)
+    plt.grid()
+
 def train_model(**kwargs):
     trainer = pl.Trainer(default_root_dir=os.path.join(CHECKPOINT_PATH, "brainTumor_ViT"), 
                          accelerator="gpu" if str(device).startswith("cuda") else "cpu",
                          devices=1,
-                         max_epochs=40,
+                         max_epochs=100,
                          callbacks=[ModelCheckpoint(save_weights_only=True, mode="max", monitor="val_acc"),
                                     LearningRateMonitor("epoch")])
     trainer.logger._log_graph = True         # If True, we plot the computation graph in tensorboard
     trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, "ViT.ckpt")
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit50.ckpt")
     if os.path.isfile(pretrained_filename):
         print(f"Found pretrained model at {pretrained_filename}, loading...")
         model = ViT.load_from_checkpoint(pretrained_filename) # Automatically loads the model with the saved hyperparameters
@@ -38,29 +45,44 @@ def train_model(**kwargs):
     test_result = trainer.test(model, test_loader, verbose=False)
     result = {"test": test_result[0]["test_acc"], "val": val_result[0]["test_acc"]}
 
-    return model, result
+    return model, result ,trainer.logged_metrics
 
 #load Dataset
 loadInstance = DatasetLoader('C:\\Users\\ranmi\\dev\\GraphNeuralNet\\VisionTransformers\\brain_tumor_detection_transformers\\brain_tumor_dataset')
-train_loader ,val_loader, test_loader = loadInstance.loadDataset()
+train_loader ,val_loader, test_loader, original_dataset,augmented_dataset  = loadInstance.loadDataset()
 print("ZEVEL")
 PLOT_ENABLE = 0
 if PLOT_ENABLE:
+    # yes-no plot
     plt.subplot(1, 2, 1)
     plt.title("Raw Image - no")
-    no_img = train_loader.dataset[47][0].permute(1, 2, 0)
+    no_img = original_dataset[47][0].permute(1, 2, 0)
     plt.imshow(no_img)   # 128 x 128 x 3
     
     plt.subplot(1, 2, 2)
     plt.title("Raw Image - yes")
-    yes_img = train_loader.dataset[100][0].permute(1, 2, 0)
+    yes_img = original_dataset[100][0].permute(1, 2, 0)
     plt.imshow(yes_img)   # 128 x 128 x 3
     
     plt.show()
     plt.close()
 
+    # image augmentation
+    plt.subplot(1, 2, 1)
+    plt.title("Original Image ")
+    no_aug_img = original_dataset[47][0].permute(1, 2, 0)
+    plt.imshow(no_aug_img)   # 128 x 128 x 3
+    
+    plt.subplot(1, 2, 2)
+    plt.title("Augmented Image")
+    yes_aug_img = augmented_dataset[47][0].permute(1, 2, 0)
+    plt.imshow(yes_aug_img)   # 128 x 128 x 3
+    
+    plt.show()
+    plt.close()
+
     #patch embedding
-    no_img = test_loader.dataset[2][0].permute(1, 2, 0)
+    # no_img = test_loader.dataset[2][0].permute(1, 2, 0)
     plt.imshow(no_img)   # 128 x 128 x 3
     plt.show()
     plt.close()
@@ -92,16 +114,8 @@ if PLOT_ENABLE:
 
 else:
     
-    # train_loader = brain_tumor_dataset
-    # test_loader = brain_tumor_dataset
-    # val_loader = brain_tumor_dataset
-    # Define the split sizes
-    # train_size = int(0.9 * len(brain_tumor_dataset.dataset))  # 90% for training
-    # test_size = len(brain_tumor_dataset.dataset) - train_size  # Remaining 10% for testing
-# 
-    # train_loader, test_loader = random_split(brain_tumor_dataset.dataset, [train_size, test_size])
-    # val_loader = test_loader
-    model, results = train_model(model_kwargs={
+    
+    model, results, metrics  = train_model(model_kwargs={
                                     'embed_dim': 256,
                                     'hidden_dim': 512,
                                     'num_heads': 8,
@@ -114,6 +128,7 @@ else:
                                 },
                                 lr=3e-4)
 print("ViT results", results)
+
 
 all_tests_imgs = torch.stack([test_loader.dataset[idx][0] for idx in range(len(test_loader.dataset))], dim=0)
 all_labels = torch.tensor([test_loader.dataset[idx][1] for idx in range(len(test_loader.dataset))])
@@ -128,7 +143,9 @@ preds = torch.argmax(predictions)
 from PIL import Image
  
 # image_np = all_tests_imgs[1].permute(1, 2, 0).numpy()
-image_np = (all_tests_imgs[3].permute(1, 2, 0) * 255).byte().numpy()
+image_np = (all_tests_imgs[11].permute(1, 2, 0) * 255).byte().numpy()
 
 image = Image.fromarray(image_np)
-image.save("tensor_image.png")
+image.save("tensor_image11.png")
+
+#evaluate train and validation procedure

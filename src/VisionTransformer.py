@@ -164,8 +164,9 @@ class ViT(pl.LightningModule):
         # loss = F.binary_cross_entropy_with_logits(preds, labels)  # simply binary 
         acc = (preds.argmax(dim=-1) == labels).float().mean()
         
-        self.log(f'{mode}_loss', loss)
-        self.log(f'{mode}_acc', acc)
+        self.log(f'{mode}_loss', loss,prog_bar=True, logger=True)
+        self.log(f'{mode}_acc', acc,prog_bar=True, logger=True)
+        
         return loss
 
     def training_step(self, batch, batch_idx):
