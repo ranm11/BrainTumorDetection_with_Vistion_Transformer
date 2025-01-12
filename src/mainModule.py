@@ -118,12 +118,12 @@ else:
     model, results, metrics  = train_model(model_kwargs={
                                     'embed_dim': 256,
                                     'hidden_dim': 512,
-                                    'num_heads': 8,
+                                    'num_heads': 2,             #2 heads
                                     'num_layers': 6,
-                                    'patch_size': 8,
+                                    'patch_size': 8,            #8x8 for square patch
                                     'num_channels': 3,
-                                    'num_patches': 256,
-                                    'num_classes': 2,
+                                    'num_patches': 256,      #NOF Patches per image   
+                                    'num_classes': 2,        #equivallent to Binary cross entropy in categorical 
                                     'dropout': 0.2
                                 },
                                 lr=3e-4)
@@ -139,6 +139,8 @@ with torch.no_grad():
 
 preds = torch.argmax(predictions)    
 
+
+attention_maps = model.get_attention_maps(all_tests_imgs[0])
 #watch image for misshit
 from PIL import Image
  

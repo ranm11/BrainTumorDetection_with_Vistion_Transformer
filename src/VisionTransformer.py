@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
 import torch.optim as optim
-
+from MultiHeadAttention import EncoderBlock , PositionalEncoding, TransformerEncoder
 import os
 import numpy as np
 import random
@@ -108,7 +108,13 @@ class VisionTransformer(nn.Module):
         
         # Layers/Networks
         self.input_layer = nn.Linear(num_channels*(patch_size**2), embed_dim)
-        self.transformer = nn.Sequential(*[AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers)])
+        # self.transformer = nn.Sequential(*[AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers)])
+        # Transformer
+        self.transformer = TransformerEncoder(num_layers=num_layers,
+                                              input_dim=embed_dim,
+                                              dim_feedforward=2*hidden_dim,
+                                              num_heads=num_heads,
+                                              dropout=dropout)
         self.mlp_head = nn.Sequential(
             nn.LayerNorm(embed_dim),
             nn.Linear(embed_dim, num_classes)
@@ -117,8 +123,8 @@ class VisionTransformer(nn.Module):
         
         # Parameters/Embeddings
         self.cls_token = nn.Parameter(torch.randn(1,1,embed_dim))
-        self.pos_embedding = nn.Parameter(torch.randn(1,1+num_patches,embed_dim))
-    
+        # self.pos_embedding = nn.Parameter(torch.randn(1,1+num_patches,embed_dim))
+        self.positional_encoding = PositionalEncoding(d_model = embed_dim)
     
     def forward(self, x):
         # Preprocess input
@@ -129,18 +135,31 @@ class VisionTransformer(nn.Module):
         # Add CLS token and positional encoding
         cls_token = self.cls_token.repeat(B, 1, 1)
         x = torch.cat([cls_token, x], dim=1)
-        x = x + self.pos_embedding[:,:T+1]
-        
+        # x = x + self.pos_embedding[:,:T+1]
+        x = self.positional_encoding(x)
+
         # Apply Transforrmer
         x = self.dropout(x)
         x = x.transpose(0, 1)
         x = self.transformer(x)
         
-        # Perform classification prediction
+        # Perform classification prediction output net
         cls = x[0]
         out = self.mlp_head(cls)
         return out
 
+    @torch.no_grad()
+    def get_attention_maps(self, x, mask=None, add_positional_encoding=True):
+        """
+        Function for extracting the attention matrices of the whole Transformer for a single batch.
+        Input arguments same as the forward pass.
+        """
+        x = self.input_layer(x)
+        if add_positional_encoding:
+            x = self.positional_encoding(x)
+        attention_maps = self.transformer.get_attention_maps(x, mask=mask)
+        return attention_maps
+    
 class ViT(pl.LightningModule):
     
     def __init__(self, model_kwargs,lr):
@@ -148,7 +167,10 @@ class ViT(pl.LightningModule):
         self.save_hyperparameters()
         self.model = VisionTransformer(**model_kwargs)
         # self.example_input_array = next(iter(train_loader))[0]
-        
+    @torch.no_grad()
+    def get_attention_maps(self, x):
+        return self.model.get_attention_maps(x) 
+       
     def forward(self, x):
         return self.model(x)
     
