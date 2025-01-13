@@ -48,7 +48,7 @@ def train_model(**kwargs):
     return model, result ,trainer.logged_metrics
 
 #load Dataset
-loadInstance = DatasetLoader('C:\\Users\\ranmi\\dev\\GraphNeuralNet\\VisionTransformers\\brain_tumor_detection_transformers\\brain_tumor_dataset')
+loadInstance = DatasetLoader('C:\\Users\\ranmi\\dev\\BrainTumorDetection_with_Vistion_Transformer\\brain_tumor_dataset')
 train_loader ,val_loader, test_loader, original_dataset,augmented_dataset  = loadInstance.loadDataset()
 print("ZEVEL")
 PLOT_ENABLE = 0
@@ -139,6 +139,9 @@ with torch.no_grad():
 
 preds = torch.argmax(predictions)    
 
+
+print(all_labels)
+print(predictions)
 #watch image for misshit
 from PIL import Image
  
