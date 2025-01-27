@@ -29,18 +29,16 @@ class DatasetLoader:
             transforms.Normalize(mean=[0.185, 0.156, 0.106], std=[0.129, 0.124, 0.125])
         ])
         # Load the dataset
-        #dataset_path = 'C:\\Users\\ranmi\\dev\\GraphNeuralNet\\VisionTransformers\\brain_tumor_detection_transformers\\brain_tumor_dataset'
         original_dataset = datasets.ImageFolder(self.dataset_path, transform=transform)
         augmented_dataset = datasets.ImageFolder(self.dataset_path, transform=augmented_transform)
-        combined_dataset = ConcatDataset([original_dataset, augmented_dataset])
         # Create DataLoader for batching and shuffling
         batch_size = 32
         # Define the split sizes
-        train_size = int(0.9 * len(combined_dataset))  # 90% for training
-        val_size = int((len(combined_dataset) - train_size + 1 )//2)
-        test_size = len(combined_dataset) - train_size - val_size
+        train_size = int(0.9 * len(original_dataset))  # 90% for training
+        val_size = int((len(original_dataset) - train_size + 1 )//2)
+        test_size = len(original_dataset) - train_size - val_size
 
-        train_loader,val_loader, test_loader = random_split(combined_dataset, [train_size, val_size,test_size])
+        train_loader,val_loader, test_loader = random_split(original_dataset, [train_size, val_size,test_size])
 
         train_data_loader = DataLoader(train_loader, batch_size=batch_size, shuffle=True, num_workers=11,persistent_workers=True)
         val_data_loader = DataLoader(val_loader, batch_size=batch_size, shuffle=True, num_workers=11,persistent_workers=True)
