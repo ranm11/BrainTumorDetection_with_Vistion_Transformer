@@ -5,19 +5,31 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-
+import numpy as np
 import os
+import seaborn as sns
+
 DATASET_PATH = "brain_tumor_data"
 CHECKPOINT_PATH = "saved_brain_tumor_models"
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 print("Device:", device)
 
-def plot_metrics(metrics, title, ylabel):
-    plt.plot(range(1, len(metrics) + 1), metrics, marker='o')
-    plt.title(title)
-    plt.xlabel('Epoch')
-    plt.ylabel(ylabel)
-    plt.grid()
+def plot_attention(attn_map,  head_idx, batch_idx,layer_idx, downsample=False):
+    attn_weights = attn_map[layer_idx,batch_idx, head_idx].detach().cpu().numpy()  # Shape (256,256)
+
+    if downsample:
+        attn_weights = attn_weights[::4, ::4]  # Downsample 256×256 → 64×64 for readability
+
+    plt.figure(figsize=(8, 8))
+    sns.heatmap(attn_weights, cmap="viridis", annot=False)
+    plt.title(f"Attention Map - Layer {layer_idx}, Head {head_idx}")
+    plt.xlabel("Key Patches (256)")
+    plt.ylabel("Query Patches (256)")
+    # plt.show()
+    filename = f"attention_map_b{batch_idx}_l{layer_idx}_h{head_idx}.png"
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
+    
+    plt.close()
 
 def train_model(**kwargs):
     trainer = pl.Trainer(default_root_dir=os.path.join(CHECKPOINT_PATH, "brainTumor_ViT"), 
@@ -30,7 +42,7 @@ def train_model(**kwargs):
     trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit50.ckpt")
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit.ckpt")
     if os.path.isfile(pretrained_filename):
         print(f"Found pretrained model at {pretrained_filename}, loading...")
         model = ViT.load_from_checkpoint(pretrained_filename) # Automatically loads the model with the saved hyperparameters
@@ -50,7 +62,6 @@ def train_model(**kwargs):
 #load Dataset
 loadInstance = DatasetLoader('C:\\Users\\ranmi\\dev\\BrainTumorDetection_with_Vistion_Transformer\\brain_tumor_dataset')
 train_loader ,val_loader, test_loader, original_dataset,augmented_dataset  = loadInstance.loadDataset()
-print("ZEVEL")
 PLOT_ENABLE = 0
 if PLOT_ENABLE:
     # yes-no plot
@@ -88,16 +99,7 @@ if PLOT_ENABLE:
     plt.close()
 
     NUM_IMAGES = len(train_loader.dataset)-1
-    # dataset = brain_tumor_dataset.dataset
-    #single image plot
-    # all_imgs = torch.stack([dataset[idx][0] for idx in range(NUM_IMAGES)], dim=0)
-    # all_labels = [dataset[idx][1] for idx in range(NUM_IMAGES)]
-    # img_grid = torchvision.utils.make_grid(CIFAR_images, nrow=4, normalize=True, pad_value=0.9)
-    # img_grid = img_grid.permute(1, 2, 0)
-
-    #image patch plot
-    # img_grid = torchvision.utils.make_grid(all_imgs, nrow=4, normalize=True, pad_value=0.9)
-    # img_grid = img_grid.permute(1, 2, 0)
+    
     all_imgs_plot = torch.stack([no_img,yes_img],dim=0)
     all_imgs_plot=all_imgs_plot.permute(0,3,1,2)
     img_patches = img_to_patch(all_imgs_plot, patch_size=8, flatten_channels=False)
@@ -139,6 +141,16 @@ with torch.no_grad():
 
 preds = torch.argmax(predictions)    
 
+B, C, H, W = all_tests_imgs.shape
+with torch.no_grad():
+    attention_maps = model.get_attention_maps(all_tests_imgs) # check if this need to be removed
+NUM_HEADS=8
+batch_idx=2
+NUM_layers = 6
+for head_idx in range(NUM_HEADS):
+    for layer_idx in range(NUM_layers):
+        plot_attention(attention_maps,head_idx, batch_idx,layer_idx)
+# plot_attention_maps(all_tests_imgs, attention_maps, 0)
 
 print(all_labels)
 print(predictions)

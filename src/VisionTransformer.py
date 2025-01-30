@@ -77,14 +77,20 @@ class AttentionBlock(nn.Module):
             nn.Linear(hidden_dim, embed_dim),
             nn.Dropout(dropout)
         )
-        
-        
+        self.attn_out = None
+                
     def forward(self, x):
         inp_x = self.layer_norm_1(x)
-        x = x + self.attn(inp_x, inp_x, inp_x)[0]
+        self.attn_out , _ = self.attn(inp_x, inp_x, inp_x, need_weights=True, average_attn_weights=False)
+        x = x + self.attn_out
         x = x + self.linear(self.layer_norm_2(x))
         return x
 
+    def get_attention_maps(self,x):
+        inp_x = self.layer_norm_1(x)
+        attn_map = self.attn(inp_x, inp_x, inp_x, need_weights=True, average_attn_weights=False)[1]
+        return attn_map
+    
 class VisionTransformer(nn.Module):
     
     def __init__(self, embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches, dropout=0.0):
@@ -141,6 +147,21 @@ class VisionTransformer(nn.Module):
         out = self.mlp_head(cls)
         return out
 
+    def get_attention_maps(self,img, mask=None):
+        x = img_to_patch(img, self.patch_size)
+        B, T, _ = x.shape
+        x = self.input_layer(x)
+ 
+        x = x + self.pos_embedding[:,:T]
+ 
+        x = self.dropout(x)
+        x = x.transpose(0, 1)
+        attn_map=[]
+        for i, layer in enumerate(self.transformer):
+            if isinstance(layer, AttentionBlock):
+                attn_map.append(layer.get_attention_maps(x))
+        return torch.stack(attn_map,dim=0)
+
 class ViT(pl.LightningModule):
     
     def __init__(self, model_kwargs,lr):
@@ -148,6 +169,8 @@ class ViT(pl.LightningModule):
         self.save_hyperparameters()
         self.model = VisionTransformer(**model_kwargs)
         # self.example_input_array = next(iter(train_loader))[0]
+    def get_attention_maps(self,img):
+        return self.model.get_attention_maps(img)
         
     def forward(self, x):
         return self.model(x)
