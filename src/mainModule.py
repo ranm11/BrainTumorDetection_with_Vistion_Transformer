@@ -8,26 +8,58 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 import numpy as np
 import os
 import seaborn as sns
+import cv2
+from PIL import Image
 
 DATASET_PATH = "brain_tumor_data"
 CHECKPOINT_PATH = "saved_brain_tumor_models"
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 print("Device:", device)
 
-def plot_attention(attn_map,  head_idx, batch_idx,layer_idx, downsample=False):
-    attn_weights = attn_map[layer_idx,batch_idx, head_idx].detach().cpu().numpy()  # Shape (256,256)
+def plot_attention(attn_map,  head_idx, batch_idx,layer_idx,imgs, downsample=False):
+    attn_weights = attn_map[layer_idx,batch_idx, head_idx]
+    mean_attention = attn_weights.mean(dim=0)
+    mean_attention = mean_attention.reshape(16, 16).numpy()
+    attention_resized = cv2.resize(mean_attention, (imgs[batch_idx].shape[1], imgs[batch_idx].shape[2]))
+    attention_resized = (attention_resized - attention_resized.min()) / (attention_resized.max() - attention_resized.min())
+    attention_resized = (attention_resized * 255).astype(np.uint8)
 
-    if downsample:
-        attn_weights = attn_weights[::4, ::4]  # Downsample 256×256 → 64×64 for readability
-
-    plt.figure(figsize=(8, 8))
-    sns.heatmap(attn_weights, cmap="viridis", annot=False)
-    plt.title(f"Attention Map - Layer {layer_idx}, Head {head_idx}")
-    plt.xlabel("Key Patches (256)")
-    plt.ylabel("Query Patches (256)")
-    # plt.show()
-    filename = f"attention_map_b{batch_idx}_l{layer_idx}_h{head_idx}.png"
+    # Convert to a Heatmap
+    heatmap = cv2.applyColorMap(attention_resized, cv2.COLORMAP_JET)
+    # plt.figure(figsize=(8,8))
+    # plt.imshow(heatmap)
+    # plt.axis("off")
+    # plt.title("Attention Overlay on Image")
+    # filename = f"attention_map_b{batch_idx}_.png"
+    # plt.savefig(filename, dpi=300, bbox_inches="tight")
+    # # Overlay on Original Image
+    # overlay = cv2.addWeighted(np.array((imgs[batch_idx]).transpose(0,2)), 0.6, heatmap, 0.4, 0)
+    
+    plt.subplot(1,2,1)
+    # plt.figure(figsize=(6,6))
+    plt.imshow(heatmap)
+    plt.axis("off")
+    plt.title("Attention Overlay")
+    
+    plt.subplot(1,2,2)
+    image_np = (imgs[batch_idx].permute(1, 2, 0) * 255).byte().numpy()
+    image = Image.fromarray(image_np)
+    #image.save("missClasifiedImg.png")
+    plt.title("Original Image")
+    plt.imshow(image)
+    
+    filename = f"attention_overlay_image_{batch_idx}_{head_idx}_{layer_idx}.png"
     plt.savefig(filename, dpi=300, bbox_inches="tight")
+
+
+    # plt.figure(figsize=(8, 8))
+    # sns.heatmap(attn_weights, cmap="viridis", annot=False)
+    # plt.title(f"Attention Map - Layer {layer_idx}, Head {head_idx}")
+    # plt.xlabel("Key Patches (256)")
+    # plt.ylabel("Query Patches (256)")
+    # # plt.show()
+    # filename = f"attention_map_b{batch_idx}_l{layer_idx}_h{head_idx}.png"
+    # plt.savefig(filename, dpi=300, bbox_inches="tight")
     
     plt.close()
 
@@ -42,7 +74,7 @@ def train_model(**kwargs):
     trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit.ckpt")
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit_2.ckpt")
     if os.path.isfile(pretrained_filename):
         print(f"Found pretrained model at {pretrained_filename}, loading...")
         model = ViT.load_from_checkpoint(pretrained_filename) # Automatically loads the model with the saved hyperparameters
@@ -92,8 +124,7 @@ if PLOT_ENABLE:
     plt.show()
     plt.close()
 
-    #patch embedding
-    # no_img = test_loader.dataset[2][0].permute(1, 2, 0)
+    #inage patching
     plt.imshow(no_img)   # 128 x 128 x 3
     plt.show()
     plt.close()
@@ -144,23 +175,30 @@ preds = torch.argmax(predictions)
 B, C, H, W = all_tests_imgs.shape
 with torch.no_grad():
     attention_maps = model.get_attention_maps(all_tests_imgs) # check if this need to be removed
-NUM_HEADS=8
-batch_idx=2
-NUM_layers = 6
-for head_idx in range(NUM_HEADS):
-    for layer_idx in range(NUM_layers):
-        plot_attention(attention_maps,head_idx, batch_idx,layer_idx)
-# plot_attention_maps(all_tests_imgs, attention_maps, 0)
+
+plot_attention_maps = True
+if(plot_attention_maps):
+    NUM_HEADS=8
+    batch_idx=2
+    NUM_layers = 6
+    for batch_idx in range(B):
+        for head_idx in range(NUM_HEADS):
+            for layer_idx in range(NUM_layers):
+                plot_attention(attention_maps,head_idx, batch_idx,layer_idx,all_tests_imgs)
+
+plot_positionalEncoding = False
+if(plot_positionalEncoding):
+    positional_encodings = model.get_positional_encoding(all_tests_imgs)
+    filename = "positional_encoding.png"
+    # plt.savefig(filename, dpi=300, bbox_inches="tight")
+    
+    # plt.close()
 
 print(all_labels)
 print(predictions)
-#watch image for misshit
-from PIL import Image
- 
-# image_np = all_tests_imgs[1].permute(1, 2, 0).numpy()
-image_np = (all_tests_imgs[11].permute(1, 2, 0) * 255).byte().numpy()
+#watch image for miss-hit
 
-image = Image.fromarray(image_np)
-image.save("tensor_image11.png")
+
+# image_np = all_tests_imgs[1].permute(1, 2, 0).numpy()
 
 #evaluate train and validation procedure

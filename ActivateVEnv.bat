@@ -6,7 +6,7 @@ if not exist %VENV% (
     call pip install venv
     call python -m venv %VENV%
     call %VENV%\Scripts\activate.bat
-    call pip install torch  matplotlib torchvision IPython seaborn pytorch_lightning
+    call pip install torch  matplotlib torchvision IPython seaborn pytorch_lightning opencv-python
 ) ELSE (
     call %VENV%\Scripts\activate.bat
 )

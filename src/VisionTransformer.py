@@ -11,7 +11,6 @@ import math
 import json
 from functools import partial
 from PIL import Image
-
 ## Imports for plotting
 import matplotlib.pyplot as plt
 plt.set_cmap('cividis')
@@ -147,6 +146,13 @@ class VisionTransformer(nn.Module):
         out = self.mlp_head(cls)
         return out
 
+    def get_positional_encoding(self,img):
+        x = img_to_patch(img, self.patch_size)
+        B, T, _ = x.shape
+        x = self.input_layer(x)
+        pe = self.pos_embedding[:,:T]
+        return pe
+
     def get_attention_maps(self,img, mask=None):
         x = img_to_patch(img, self.patch_size)
         B, T, _ = x.shape
@@ -171,6 +177,21 @@ class ViT(pl.LightningModule):
         # self.example_input_array = next(iter(train_loader))[0]
     def get_attention_maps(self,img):
         return self.model.get_attention_maps(img)
+    
+    def get_positional_encoding(self,img):
+        encod_block = self.model.get_positional_encoding(img)
+        pe = encod_block[0].detach().numpy()
+
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,3))
+        pos = ax.imshow(pe, cmap="RdGy", extent=(1,pe.shape[1]+1,pe.shape[0]+1,1))
+        fig.colorbar(pos, ax=ax)
+        ax.set_xlabel("Position in sequence")
+        ax.set_ylabel("Hidden dimension")
+        ax.set_title("Positional encoding for embedded input")
+        ax.set_xticks([1]+[i*10 for i in range(1,1+pe.shape[1]//10)])
+        ax.set_yticks([1]+[i*10 for i in range(1,1+pe.shape[0]//10)])
+        filename = "positional_encoding.png"
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
         
     def forward(self, x):
         return self.model(x)
