@@ -176,7 +176,7 @@ B, C, H, W = all_tests_imgs.shape
 with torch.no_grad():
     attention_maps = model.get_attention_maps(all_tests_imgs) # check if this need to be removed
 
-plot_attention_maps = True
+plot_attention_maps = False
 if(plot_attention_maps):
     NUM_HEADS=8
     batch_idx=2
