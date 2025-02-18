@@ -7,4 +7,10 @@ following Data Augmentation, we enlarge our dataset to ~500 images and reach  mo
 
 as first step we devide our image in to patches 
 
-project each patch via 
+![patch_sequence_yes_no_brain](https://github.com/user-attachments/assets/c7e2348d-3d99-470e-af61-ed4f1f9b57ab)
+
+then we project each patch via input layer (Embedding layer) , and each patch shall get a vector of 256 (dmodule) len.
+following embedding layer each patch shall go through Positional Embedding to mak up sequence.
+![positional_encoding](https://github.com/user-attachments/assets/62305fc8-7516-4a54-8581-aa1135d25ff4)
+
+
