@@ -11,6 +11,13 @@ as first step we devide our image in to patches
 
 then we project each patch via input layer (Embedding layer) , and each patch shall get a vector of 256 (dmodule) len.
 following embedding layer each patch shall go through Positional Embedding to mak up sequence.
+
+once we have embeded values  within positional encoding we can apply K Q V values to multi head attention layer,
+and get attention map.
+from attention map we may extract the heat map :
+
+![image](https://github.com/user-attachments/assets/22801f65-50e3-4877-a3c2-14b9069e6c04)
+
 ![positional_encoding](https://github.com/user-attachments/assets/62305fc8-7516-4a54-8581-aa1135d25ff4)
 
 
