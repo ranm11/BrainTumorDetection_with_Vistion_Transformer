@@ -74,7 +74,7 @@ def train_model(**kwargs):
     trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit_2.ckpt")
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit3_new_aug_1.ckpt")
     if os.path.isfile(pretrained_filename):
         print(f"Found pretrained model at {pretrained_filename}, loading...")
         model = ViT.load_from_checkpoint(pretrained_filename) # Automatically loads the model with the saved hyperparameters
@@ -113,12 +113,12 @@ if PLOT_ENABLE:
     # image augmentation
     plt.subplot(1, 2, 1)
     plt.title("Original Image ")
-    no_aug_img = original_dataset[47][0].permute(1, 2, 0)
+    no_aug_img = original_dataset[48][0].permute(1, 2, 0)
     plt.imshow(no_aug_img)   # 128 x 128 x 3
     
     plt.subplot(1, 2, 2)
     plt.title("Augmented Image")
-    yes_aug_img = augmented_dataset[47][0].permute(1, 2, 0)
+    yes_aug_img = augmented_dataset[48][0].permute(1, 2, 0)
     plt.imshow(yes_aug_img)   # 128 x 128 x 3
     
     plt.show()

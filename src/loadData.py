@@ -21,12 +21,13 @@ class DatasetLoader:
         ])
         #add data augmentation
         augmented_transform = transforms.Compose([
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(20),
-            transforms.RandomResizedCrop(size=(128,128), scale=(0.8, 1.2)),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.185, 0.156, 0.106], std=[0.129, 0.124, 0.125])
+        transforms.Grayscale(num_output_channels=3),  # Convert 3-channel grayscale to 1-channel
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(20),
+        transforms.RandomResizedCrop(size=(128, 128), scale=(0.8, 1.2)),
+        transforms.ColorJitter(brightness=0.1, contrast=0.1),  # Works for grayscale
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.15], std=[0.12])  # Adjusted for single-channel
         ])
         # Load the dataset
         original_dataset = datasets.ImageFolder(self.dataset_path, transform=transform)
