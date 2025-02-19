@@ -74,7 +74,7 @@ def train_model(**kwargs):
     trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Vit3_new_aug_1.ckpt")
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, "Pre_trained_Vit.ckpt")
     if os.path.isfile(pretrained_filename):
         print(f"Found pretrained model at {pretrained_filename}, loading...")
         model = ViT.load_from_checkpoint(pretrained_filename) # Automatically loads the model with the saved hyperparameters
