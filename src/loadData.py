@@ -38,8 +38,8 @@ class DatasetLoader:
         train_size = int(0.9 * len(original_dataset))  # 90% for training
         val_size = int((len(original_dataset) - train_size + 1 )//2)
         test_size = len(original_dataset) - train_size - val_size
-
-        train_loader,val_loader, test_loader = random_split(original_dataset, [train_size, val_size,test_size])
+        generator = torch.Generator().manual_seed(42)
+        train_loader,val_loader, test_loader = random_split(original_dataset, [train_size, val_size,test_size], generator=generator)
 
         train_data_loader = DataLoader(train_loader, batch_size=batch_size, shuffle=True, num_workers=11,persistent_workers=True)
         val_data_loader = DataLoader(val_loader, batch_size=batch_size, shuffle=True, num_workers=11,persistent_workers=True)
